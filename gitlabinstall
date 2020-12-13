@@ -1,0 +1,262 @@
+#Install Kubectl
+https://docs.aws.amazon.com/eks/latest/userguide/install-kubectl.html
+curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.18.9/2020-11-02/bin/linux/amd64/kubectl
+chmod +x ./kubectl
+mkdir -p $HOME/bin && cp ./kubectl $HOME/bin/kubectl && export PATH=$PATH:$HOME/bin
+yum install bash-completion
+kubectl version --client
+
+#Install Kubectl bash completion
+yum install bash-completion
+type _init_completion
+source /usr/share/bash-completion/bash_completion
+type _init_completion
+echo 'source <(kubectl completion bash)' >>~/.bashrc
+kubectl completion bash >/etc/bash_completion.d/kubectl
+
+
+#Get EKS Cluster list 
+aws eks list-clusters
+
+#Get Kube config file
+aws eks update-kubeconfig --name EKS
+
+
+#Install Helm
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+cp /usr/local/bin/helm /usr/bin/
+
+#Helm Auto completion 
+helm completion bash >> ~/.bash_completion
+. /etc/profile.d/bash_completion.sh
+. ~/.bash_completion
+source <(helm completion bash)
+
+
+
+
+#This is for certs
+https://github.com/jaganthoutam/gitlatbtestcerts/
+
+kubectl create secret tls gitlab-self-signed-gitlab --cert=newcerts/certs/servers/gitlab.gitlabtesting.com/gitlab.gitlabtesting.com.crt --key=newcerts/certs/servers/gitlab.gitlabtesting.com/gitlab.gitlabtesting.com.key
+
+
+kubectl create secret tls gitlab-self-signed-registry --cert=newcerts/certs/servers/gitlab.gitlabtesting.com/registry.gitlabtesting.com.crt --key=newcerts/certs/servers/gitlab.gitlabtesting.com/registry.gitlabtesting.com.key
+
+
+#This is for Runner 
+kubectl create secret generic gitlabsr-runner-certs-secret-3 --from-file=gitlab.gitlabtesting.com.crt=newcerts/certs/servers/gitlab.gitlabtesting.com/gitlab.gitlabtesting.com.crt --from-file=registry.gitlabtesting.com.crt=newcerts/certs/servers/gitlab.gitlabtesting.com/registry.gitlabtesting.com.crt
+
+
+
+#create service account
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: gitlab
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: gitlab-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: gitlab
+    namespace: kube-system
+
+
+
+#Gitlab install
+
+#Tags cluster, kubernetes
+
+helm repo add gitlab https://charts.gitlab.io/
+
+helm install gitlab gitlab/gitlab -f values.yaml
+
+
+#Get root password
+kubectl get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.password}' | base64 --decode ; echo
+
+
+#Create Shared Runner 
+
+helm install gitlab-runner-shared gitlab/gitlab-runner -f runner-shared-values.yaml
+helm install gitlab-dedicated-shared gitlab/gitlab-runner -f runner-shared-values.yaml
+
+  config.template.toml: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.kubernetes.volumes]
+          [[runners.kubernetes.volumes.host_path]]
+            name = "docker"
+            mount_path = "/var/run/docker.sock"
+            host_path = "/var/run/docker.sock"
+
+
+####NOTE DELETEE THE POD AFTER CONFIG CHANGE
+
+
+#Create go Project 
+
+https://github.com/jaganthoutam/gotest.git
+
+CI_REGISTRY_USER: XXXX
+CI_REGISTRY : https://index.docker.io/v1/
+CI_REGISTRY_PASSWORD: XXXX
+CI_REGISTRY_IMAGE: reponame
+CI_APPLICATION_REPOSITORY: reponame/imagename
+
+DOCKER_USER. This is the Docker user you use to login to the Docker Hub.
+DOCKER_PASSWORD. This is the Docker passwrod you use to login to the Docker Hub.
+CERTIFICATE_AUTHORITY_DATA. This is the CA configuration for the Kubernetes cluster. For EKS, login to the AWS EKS console and open up your cluster configuration. You can find the Certificate Authority on the right.
+SERVER. This is the endpoint to the Kubernetes API for our cluster. You can find this on the page where you already are.
+USER_TOKEN. This is the token for the user that we'll use to connect to the Kubernetes cluster. We need to find the token for the user that we created earlier. First, list all secrets with kubectl get secrets. There will be a secret starting with gitlab-service-account-token-, which is the token for the GitLab user we created earlier. Copy the NAME for this secret, and run the following command to see the token: kubectl describe secret [NAME]. Copy the token that is part of the output, and enter it in GitLab.
+
+
+#Gitlab Vlues
+values.yaml
+
+certmanager-issuer:
+  email: me@example.com
+certmanager:
+  install: false
+gitlab:
+  sidekiq:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 650M
+  webservice:
+    ingress:
+      tls:
+        secretName: gitlab-self-signed-gitlab
+    resources:
+      requests:
+        memory: 1.5G
+gitlab-runner:
+  install: false
+  runners:
+    privileged: true
+global:
+  hosts:
+    domain: gitlabtesting.com
+  ingress:
+    tls:
+      enabled: true
+registry:
+  enabled: false
+  install: false
+  ingress:
+    tls:
+      secretName: gitlab-self-signed-registry
+      
+      
+      
+      
+#Runner values     
+runner-values.yaml
+
+
+imagePullSecrets:
+- regcred
+gitlabUrl: "https://gitlab.gitlabtesting.com/"
+runnerRegistrationToken: "jUlTCHiyzHSoYjkb0yu4xfTn8aUYSsxSRsgQOA4aYMoJgeKWxMOQLNsRakcRW0v1"
+certsSecretName: gitlabsr-runner-certs-secret-1
+concurrent: 10
+checkInterval: 30
+rbac:
+  create: true
+  clusterWideAccess: false
+metrics:
+  enabled: true
+runners:
+  image: ubuntu:16.04
+  #tags: "k8s-runner"
+  privileged: true
+  #namespace: gitlab
+
+  cachePath: "/opt/cache"
+
+  ## Distributed runners caching
+  ## ref: https://gitlab.com/gitlab-org/gitlab-runner/blob/master/docs/configuration/autoscale.md#distributed-runners-caching
+  ##
+  ## Create a secret 's3access' containing 'accesskey' & 'secretkey'
+  ## ref: https://aws.amazon.com/blogs/security/wheres-my-secret-access-key/
+  ##
+  ## $ kubectl create secret generic s3access --\
+  ##   --from-literal=accesskey="YourAccessKey" \
+  ##   --from-literal=secretkey="YourSecretKey"
+  ## ref: https://kubernetes.io/docs/concepts/configuration/secret/
+  ##
+  cache: {}
+  # cacheType: s3
+    # s3ServerAddress: s3.amazonaws.com
+    # s3BucketName:
+    # s3BucketLocation:
+    # s3CacheInsecure: false
+    # s3CachePath: "gitlab_runner"
+    # cacheShared: true
+    # secretName: s3access
+  ## Build Container specific configuration
+  ##
+  builds: {}
+    # cpuLimit: 200m
+    # memoryLimit: 256Mi
+    # cpuRequests: 100m
+    # memoryRequests: 128Mi
+
+  ## Service Container specific configuration
+  ##
+  services: {}
+    # cpuLimit: 200m
+    # memoryLimit: 256Mi
+    # cpuRequests: 100m
+    # memoryRequests: 128Mi
+
+  ## Helper Container specific configuration
+  ##
+  helpers: {}
+    # cpuLimit: 200m
+    # memoryLimit: 256Mi
+    # cpuRequests: 100m
+    # memoryRequests: 128Mi
+    # image: gitlab/gitlab-runner-helper:x86_64-latest
+
+  ## Service Account to be used for runners
+  ##
+  # serviceAccountName:
+
+  ## If Gitlab is not reachable through $CI_SERVER_URL
+  ##
+  # cloneUrl:
+
+## Configure resource requests and limits
+## ref: http://kubernetes.io/docs/user-guide/compute-resources/
+##
+resources: {}
+  # limits:
+  #   memory: 256Mi
+  #   cpu: 200m
+  # requests:
+  #   memory: 128Mi
+  #   cpu: 100m
+
+## Configure environment variables that will be present when the registration command runs
+## This provides further control over the registration process and the config.toml file
+## ref: `gitlab-runner register --help`
+## ref: https://docs.gitlab.com/runner/configuration/advanced-configuration.html
+##
+# envVars:
+#   - name: RUNNER_EXECUTOR
+#     value: kubernetes
+
