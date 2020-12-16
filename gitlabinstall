@@ -92,15 +92,6 @@ kubectl get secret gitlab-gitlab-initial-root-password -ojsonpath='{.data.passwo
 helm install gitlab-runner-shared gitlab/gitlab-runner -f runner-shared-values.yaml
 helm install gitlab-dedicated-shared gitlab/gitlab-runner -f runner-shared-values.yaml
 
-  config.template.toml: |
-    [[runners]]
-      [runners.kubernetes]
-        image = "ubuntu:16.04"
-        [runners.kubernetes.volumes]
-          [[runners.kubernetes.volumes.host_path]]
-            name = "docker"
-            mount_path = "/var/run/docker.sock"
-            host_path = "/var/run/docker.sock"
 
 
 ####NOTE DELETEE THE POD AFTER CONFIG CHANGE
@@ -174,6 +165,7 @@ runnerRegistrationToken: "jUlTCHiyzHSoYjkb0yu4xfTn8aUYSsxSRsgQOA4aYMoJgeKWxMOQLN
 certsSecretName: gitlabsr-runner-certs-secret-1
 concurrent: 10
 checkInterval: 30
+lockced: false
 rbac:
   create: true
   clusterWideAccess: false
@@ -184,7 +176,17 @@ runners:
   #tags: "k8s-runner"
   privileged: true
   #namespace: gitlab
-
+  
+  config: |
+    [[runners]]
+      [runners.kubernetes]
+        image = "ubuntu:16.04"
+        [runners.kubernetes.volumes]
+          [[runners.kubernetes.volumes.host_path]]
+            name = "docker"
+            mount_path = "/var/run/docker.sock"
+            host_path = "/var/run/docker.sock"
+            
   cachePath: "/opt/cache"
 
   ## Distributed runners caching
