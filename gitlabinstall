@@ -165,7 +165,7 @@ runnerRegistrationToken: "jUlTCHiyzHSoYjkb0yu4xfTn8aUYSsxSRsgQOA4aYMoJgeKWxMOQLN
 certsSecretName: gitlabsr-runner-certs-secret-1
 concurrent: 10
 checkInterval: 30
-lockced: false
+locked: false
 rbac:
   create: true
   clusterWideAccess: false
