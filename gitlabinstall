@@ -262,3 +262,57 @@ resources: {}
 #   - name: RUNNER_EXECUTOR
 #     value: kubernetes
 
+=========================================values.yaml=======
+
+
+letsencrypt:
+  enabled: false
+vault:
+  installed: true
+certmanager-issuer:
+  email: me@example.com
+  install: false
+certmanager:
+  install: false
+gitlab:
+  sidekiq:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 650M
+  ingress:
+    tls:
+      enabled: true
+      secretName: gitlab-self-signed-gitlab
+  webservice:
+    ingress:
+      tls:
+        secretName: gitlab-self-signed-gitlab
+    resources:
+      requests:
+        memory: 1.5G
+  registry:
+    certificate: gitlab-self-signed-registry
+    ingress:
+      tls:
+        enabled: true
+        secretName: gitlab-self-signed-registry
+gitlab-runner:
+  install: false
+  runners:
+    privileged: true
+global:
+  hosts:
+    domain: gitlabtesting.com
+  ingress:
+    tls:
+      enabled: true
+      secretName: gitlab-self-signed-gitlab
+registry:
+  enabled: true
+  install: true
+  certificate: gitlab-self-signed-registry
+  ingress:
+    tls:
+      enabled: true
+      secretName: gitlab-self-signed-registry
