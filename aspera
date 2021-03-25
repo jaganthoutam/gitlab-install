@@ -1,0 +1,14 @@
+#!/bin/bash
+
+## How to install ascp, in a gist.
+
+## Check for latest link: https://www.ibm.com/aspera/connect/
+wget -qO- https://d3gcli72yxqn2z.cloudfront.net/connect_latest/v4/bin/ibm-aspera-connect-3.11.1.58-linux-g2.12-64.tar.gz | tar xvz
+
+## run it
+chmod +x ibm-aspera-connect-3.11.1.58-linux-g2.12-64.sh
+./ibm-aspera-connect-3.11.1.58-linux-g2.12-64.sh
+
+## add it to the path now and in the future
+export PATH=$PATH:~/.aspera/connect/bin/
+echo 'export PATH=$PATH:~/.aspera/connect/bin/' >> ~/.bash_profile
